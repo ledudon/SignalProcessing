@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define MY_PI (atan(1.0)*4)
+
+typedef struct{
+    double re, im;
+}cplx;
+
+// 複素数x,yの掛け算
+cplx cplx_multiply(cplx x, cplx y){
+    cplx ans;
+    ans.re = x.re * y.re - x.im * y.im;
+    ans.im = x.re * y.im + x.im * y.re;
+    return ans;
+}
+
+// m桁の整数valをbit反転させる
+int reverseBit(int val, int m){
+    int n = 1 << (m-1);
+    int ans = 0;
+    for(int i = 0; i < m; i++){
+        if(val & (n>>i)) ans += (1<<i);
+    }
+    return ans;
+}
+
+void print_array(cplx a[], int n){
+    for(int i = 0; i < n; i++){
+        if(a[i].im < 0) printf("%.1f - %.1fi\n", a[i].re, -1*a[i].im);
+        else printf("%.1f + %.1fi\n", a[i].re, a[i].im);
+    }
+    printf("\n");
+}
+
+// ブロックn
+void block(int n, cplx target[], int isInverse){
+    cplx *temp = (cplx *)malloc(sizeof(cplx)*n);
+    for(int i = 0; i < n; i++){
+        temp[i].re = target[i].re;
+        temp[i].im = target[i].im;
+    }
+
+    for(int i = 0; i < n; i++){
+        cplx w = {cos((isInverse ? -1 : 1) * -2 * i * MY_PI / n), 
+                  sin((isInverse ? -1 : 1) * -2 * i * MY_PI / n)};
+
+        if(i < n/2){ // 上半分
+            // 水平線 そのまま
+            // 斜め線
+            target[i].re += cplx_multiply(temp[i+n/2], w).re;
+            target[i].im += cplx_multiply(temp[i+n/2], w).im;
+        }else{ // 下半分
+            // 水平線
+            target[i] = cplx_multiply(temp[i], w);
+            // 斜め線
+            target[i].re += temp[i-n/2].re;
+            target[i].im += temp[i-n/2].im;
+        }
+    }
+    free(temp);
+}
+
+cplx* FFT(int N, cplx input[], int isInverse){
+    int m; // 指数、ステージ数
+    for(m = 0; N != (1<<m); m++)
+        if(N < (1<<m)) {printf("Nが2の累乗ではないです\n"); exit(-1);}
+
+    // FFTされたデータの入れ物
+    cplx *FFTed = (cplx *)malloc(sizeof(cplx) * N);
+    for(int i = 0; i < N; i++){
+        FFTed[i].re = input[reverseBit(i, m)].re;
+        FFTed[i].im = input[reverseBit(i, m)].im;
+    }
+
+    // バタフライダイヤグラム
+    for(int step = 1; step <= m; step++){
+        int n = (1<<step); // 各ステップのブロックの大きさを表す
+        // N/n 各ステップのブロック数を表す
+        for(int i = 0; i < N/n; i++){
+            block(n, &FFTed[i*n], isInverse);
+        }
+        // print_array(FFTed, N);
+    }
+    return FFTed;
+}
+
+cplx* iFFT(int N, cplx input[]){
+    cplx *iFFTed = FFT(N, input, 1);
+    for(int i = 0; i < N; i++) iFFTed[i].re /= N;
+    return iFFTed;
+}
