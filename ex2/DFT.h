@@ -1,71 +1,76 @@
-#ifndef DFT_H_
+#ifndef DCT_H_
+#define DCT_H_
 #include <stdio.h>
 #include <math.h>
-#include <stdlib.h>
 #define MY_PI (atan(1.0)*4)
+#define ROWS 4
+#define COLS 4
 
-typedef struct {
-    double re;
-    double im;
-}COMPLEX;
-
-void print_complex(COMPLEX x){
-    printf("%.1f ", x.re);
-    if(x.im < 0) printf("- %.1fi", -1 * x.im);
-    else printf("+ %.1fi", x.im);
-}
-
-COMPLEX multiply(COMPLEX a, COMPLEX b){
-    COMPLEX ans;
-    ans.re = a.re * b.re - a.im * b.im;
-    ans.im = a.re * b.im + a.im * b.re;
-    return ans;
-}
-
-COMPLEX* DFT(int n, double input[]){
-    COMPLEX *ans = (COMPLEX *)malloc(sizeof(COMPLEX) * n);
+/// @brief DCTを行う関数
+/// @param n 配列の長さ
+/// @param input DCTを行う配列
+/// @param output DCTされた結果を入れる配列
+void DCT(int n, double input[], double output[]){
+    for(int i = 0; i < n; i++) output[i] = 0;
     for(int i = 0; i < n; i++){
-        ans[i].re = 0;
-        ans[i].im = 0;
         for(int j = 0; j < n; j++){
-            ans[i].re += input[j] * cos(-2 * MY_PI * i * j / n);
-            ans[i].im += input[j] * sin(-2 * MY_PI * i * j / n);
+            output[i] += input[j]*cos((2*j+1)*i*MY_PI/(2*n));
         }
     }
-    return ans;
 }
 
-double* iDFT(int n, COMPLEX input[]){
-    double *ans = (double *)malloc(sizeof(double) * n);
+/// @brief 逆DCTを行う関数
+/// @param n 配列の長さ
+/// @param input 逆DCTを行う配列
+/// @param output 逆DCTされた結果を入れる配列
+void iDCT(int n, double input[], double output[]){
+    for(int i = 0; i < n; i++) output[i] = (double)1/2*input[0];
     for(int i = 0; i < n; i++){
-        ans[i] = 0;
-        for(int j = 0; j < n; j++){
-            COMPLEX temp = {cos(2 * MY_PI * i * j / n), sin(2 * MY_PI * i * j / n)};
-            ans[i] += multiply(input[j], temp).re;
+        for(int j = 1; j < n; j++){
+            output[i] += input[j]*cos((2*i+1)*j*MY_PI/(2*n));
         }
-        ans[i] /= n;
-    }
-    return ans;
-}
-
-// hz以上の周波数成分を0にする
-void lowPass(COMPLEX input[], int n, int hz){
-    for(int i = hz; i <= n - hz; i++){
-        input[i].re = 0;
-        input[i].im = 0;
+        output[i] = output[i]*2/n;
     }
 }
 
-// hz以下の周波数成分を0にする
-void highPass(COMPLEX input[], int n, int hz){
-    for(int i = 0; i <= hz; i++){
-        input[i].re = 0;
-        input[i].im = 0;
+/// @brief 2次元DCTを行う関数
+/// @param row 入力、出力する配列の行数
+/// @param col 入力、出力する配列の列数
+/// @param input DCTを行う配列
+/// @param output DCTを行った結果を入れる配列
+void DCT2d(double input[ROWS][COLS], double output[ROWS][COLS]){
+    for(int i = 0; i < ROWS; i++) for(int j = 0; j < COLS; j++) output[i][j] = 0;
+
+    for(int y = 0; y < ROWS; y++){
+        for(int x = 0; x < COLS; x++){
+            for(int k = 0; k < COLS; k++){
+                output[y][x] += input[y][k]*cos((2*k+1)*x*MY_PI/(2*COLS));
+            }
+        }
     }
-    for(int i = n - hz; i < n; i++){
-        input[i].re = 0;
-        input[i].im = 0;
+
+    for(int x = 0; x < COLS; x++){
+        for(int y = 0; y < ROWS; y++){
+            for(int k = 0; k < ROWS; k++){
+                output[y][x] += input[k][x]*cos((2*k+1)*y*MY_PI/(2*COLS));
+            }
+        }
     }
 }
 
-#endif /* DFT_H_ */
+/// @brief 2次元逆DCTを行う関数
+/// @param row 入力、出力する配列の行
+/// @param col 入力、出力する配列の列
+/// @param input 逆DCTを行う配列
+/// @param output 逆DCTを行った結果を入れる配列
+void iDCT2d(int n, double input[], double output[]){
+    for(int i = 0; i < n; i++) output[i] = (double)1/2*input[0];
+    for(int i = 0; i < n; i++){
+        for(int j = 1; j < n; j++){
+            output[i] += input[j]*cos((2*i+1)*j*MY_PI/(2*n));
+        }
+        output[i] = output[i]*2/n;
+    }
+}
+
+#endif /* DCT_H_ */
